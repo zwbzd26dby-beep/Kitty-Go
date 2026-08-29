@@ -31,14 +31,14 @@ type Orchestrator interface {
 
 // FullOptions wires the complete orchestration pipeline.
 type FullOptions struct {
-	Exec       execution.Executor
-	Client     execution.LLMClient
-	Decision   *decision.Engine
-	Models     modelrouter.ModelRouter
-	Compute    compute.ComputeRouter
-	Cost       cost.CostManager
-	Limits     *limit.Manager
-	Budget     *budget.Manager
+	Exec        execution.Executor
+	Client      execution.LLMClient
+	Decision    *decision.Engine
+	Models      modelrouter.ModelRouter
+	Compute     compute.ComputeRouter
+	Cost        cost.CostManager
+	Limits      *limit.Manager
+	Budget      *budget.Manager
 	Distributed execution.DistributedExecutor
 	// Fallbacks are explicit remote targets tried after the local path.
 	Fallbacks []execution.FallbackDevice
@@ -173,7 +173,7 @@ func (o *pipelinedOrchestrator) routeModel(ctx context.Context, task types.Task,
 
 func (o *pipelinedOrchestrator) estimateCost(dec decision.Decision, modelName, input string) float64 {
 	// Char-count proxy; refined pricing arrives when model metadata carries it.
-	return float64(len(input)) * 0.00003 * float64(dec.Priority)/100
+	return float64(len(input)) * 0.00003 * float64(dec.Priority) / 100
 }
 
 // fullExecutor is the superset of Executor offered by the unified

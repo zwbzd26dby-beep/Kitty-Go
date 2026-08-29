@@ -64,8 +64,8 @@ func TestFullOrchestratorEmptyInputError(t *testing.T) {
 
 func TestFullOrchestratorFailoverToDistributed(t *testing.T) {
 	o := orchestrator.NewFull(orchestrator.FullOptions{
-		Exec:      fullExec(),
-		Client:    &flakyClient{fails: 3, content: "never"},
+		Exec:       fullExec(),
+		Client:     &flakyClient{fails: 3, content: "never"},
 		MaxRetries: 2,
 		Backoff:    1,
 		Fallbacks: []execution.FallbackDevice{
