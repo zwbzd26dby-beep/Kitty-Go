@@ -62,17 +62,58 @@ type chatResponse struct {
 	} `json:"usage"`
 }
 
+// HTTPError describes a non-2xx response from a provider endpoint.
+type HTTPError struct {
+	StatusCode int
+	Body       string
+	Provider   string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("provider %s: status %d: %s", e.Provider, e.StatusCode, e.Body)
+}
+
+// Retryable reports whether the HTTP status is transient (429 or 5xx).
+func (e *HTTPError) Retryable() bool {
+	return e.StatusCode == http.StatusTooManyRequests || e.StatusCode >= 500
+}
+
 // Complete performs a non-streaming completion against the chat/completions
-// endpoint. It retries transient failures with exponential backoff and honors
-// the context deadline.
+// endpoint. It retries transient failures (network errors, 429, 5xx) with
+// exponential backoff and honors the context deadline.
 func (h *HTTPProvider) Complete(ctx context.Context, req Request) (*Response, error) {
 	var resp *Response
-	err := utils.Retry(ctx, 3, 200*time.Millisecond, func() error {
+	err := utils.RetryWith(ctx, utils.RetryPolicy{
+		MaxAttempts: 3,
+		Initial:     200 * time.Millisecond,
+		MaxBackoff:  1 * time.Second,
+		Multiplier:  2,
+	}, isRetryable, func() error {
 		var derr error
 		resp, derr = h.completeOnce(ctx, req)
 		return derr
 	})
 	return resp, err
+}
+
+// isRetryable reports whether err is a transient failure worth retrying.
+// Network-level errors (context.DeadlineExceeded wrapped by net/http, timeouts)
+// and HTTPError with 429/5xx are retryable; other provider errors are not.
+func isRetryable(err error) bool {
+	if err == nil {
+		return false
+	}
+	if hErr, ok := err.(*HTTPError); ok {
+		return hErr.Retryable()
+	}
+	if netErr, ok := err.(netError); ok {
+		return netErr.Timeout()
+	}
+	return true
+}
+
+type netError interface {
+	Timeout() bool
 }
 
 func (h *HTTPProvider) completeOnce(ctx context.Context, req Request) (*Response, error) {
@@ -97,7 +138,7 @@ func (h *HTTPProvider) completeOnce(ctx context.Context, req Request) (*Response
 
 	if httpResp.StatusCode >= 400 {
 		b, _ := io.ReadAll(io.LimitReader(httpResp.Body, 512))
-		return nil, fmt.Errorf("provider %s: status %d: %s", h.Name(), httpResp.StatusCode, string(b))
+		return nil, &HTTPError{StatusCode: httpResp.StatusCode, Body: string(b), Provider: h.Name()}
 	}
 
 	var parsed chatResponse
