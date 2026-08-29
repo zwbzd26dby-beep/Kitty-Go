@@ -17,8 +17,12 @@ type Observability struct {
 	Started time.Time
 }
 
-// New creates an Observability root with sane defaults.
+// New creates an Observability root with sane defaults. A nil out writes
+// to io.Discard.
 func New(out io.Writer) *Observability {
+	if out == nil {
+		out = io.Discard
+	}
 	return &Observability{
 		Log:     NewLogger(out, LevelInfo),
 		Metrics: NewMetrics(),

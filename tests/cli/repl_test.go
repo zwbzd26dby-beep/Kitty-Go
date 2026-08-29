@@ -79,3 +79,81 @@ func TestREPLCustomCommand(t *testing.T) {
 		t.Fatalf("expected PONG, got: %s", out.String())
 	}
 }
+
+func runREPLCore(input string) string {
+	var out bytes.Buffer
+	core := repl.NewCore(llm.NewHistoryEchoClient())
+	e := repl.NewEngineWithCore(core, strings.NewReader(input), &out)
+	_ = e.Run()
+	return out.String()
+}
+
+func TestREPLMetricsCommand(t *testing.T) {
+	out := runREPLCore("/metrics\n/exit\n")
+	if !strings.Contains(out, "Brak zarejestrowanych metryk") {
+		t.Fatalf("expected empty-metrics message, got: %s", out)
+	}
+}
+
+func TestREPLBudgetCostEmpty(t *testing.T) {
+	out := runREPLCore("/budget\n/cost\n/exit\n")
+	if !strings.Contains(out, "Pozostały budżet") {
+		t.Fatalf("expected budget output, got: %s", out)
+	}
+	if !strings.Contains(out, "Całkowity koszt") {
+		t.Fatalf("expected cost output, got: %s", out)
+	}
+}
+
+func TestREPLModelsListsKnown(t *testing.T) {
+	out := runREPLCore("/models\n/exit\n")
+	if !strings.Contains(out, "big-pickle") {
+		t.Fatalf("expected big-pickle in models, got: %s", out)
+	}
+}
+
+func TestREPLToolsListsBuiltins(t *testing.T) {
+	out := runREPLCore("/tools\n/exit\n")
+	for _, want := range []string{"calculator", "sha256", "clock"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected tool %q, got: %s", want, out)
+		}
+	}
+}
+
+func TestREPLModelSetCommand(t *testing.T) {
+	out := runREPLCore("/model big-pickle\n/model\n/exit\n")
+	if !strings.Contains(out, "Model: big-pickle") {
+		t.Fatalf("expected model set, got: %s", out)
+	}
+}
+
+func TestREPLMemoryEmpty(t *testing.T) {
+	out := runREPLCore("/memory\n/exit\n")
+	if !strings.Contains(out, "Pamięć pusta") {
+		t.Fatalf("expected empty memory message, got: %s", out)
+	}
+}
+
+func TestREPLDevicesEmpty(t *testing.T) {
+	out := runREPLCore("/devices\n/exit\n")
+	if !strings.Contains(out, "Brak urządzeń") {
+		t.Fatalf("expected empty devices message, got: %s", out)
+	}
+}
+
+func TestREPLSecurityStatus(t *testing.T) {
+	out := runREPLCore("/security\n/exit\n")
+	if !strings.Contains(out, "Sekrety") {
+		t.Fatalf("expected security output, got: %s", out)
+	}
+}
+
+func TestREPLHelpListsAllCommands(t *testing.T) {
+	out := runREPLCore("/help\n/exit\n")
+	for _, cmd := range []string{"/model", "/models", "/budget", "/cost", "/tools", "/memory", "/devices", "/metrics", "/security"} {
+		if !strings.Contains(out, cmd) {
+			t.Fatalf("expected %s in help, got: %s", cmd, out)
+		}
+	}
+}
