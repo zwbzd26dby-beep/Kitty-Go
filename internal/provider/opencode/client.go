@@ -7,7 +7,6 @@ package opencode
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/zwbzd26dby-beep/Kitty-Go/internal/provider"
 )
@@ -46,14 +45,4 @@ func New(opts Options) provider.Provider {
 		Client:  opts.Client,
 		Limits:  opts.Limits,
 	})
-}
-
-// Route returns the optimal OpenCode model for a task, preferring big-pickle
-// for coding tasks. The signal "code"/"coding" routes to big-pickle.
-func Route(input string) string {
-	lower := strings.ToLower(input)
-	if strings.Contains(lower, "code") || strings.Contains(lower, "coding") {
-		return ModelBigPickle
-	}
-	return DefaultModel
 }
