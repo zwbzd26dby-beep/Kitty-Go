@@ -1,0 +1,28 @@
+# Binaries
+/bin/
+*.exe
+*.test
+
+# Go
+*.out
+*.prof
+coverage.out
+
+# Build artifacts
+/dist/
+/build/
+
+# Secrets - NEVER commit
+configs/secrets.yaml
+configs/*.local.yaml
+.env
+*.pem
+*.key
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Test caches
+tests/.cache/

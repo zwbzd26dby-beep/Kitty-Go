@@ -1,0 +1,9 @@
+# Kitty-Go default configuration.
+# Values here are the plugin/startup defaults. Do not put secrets here.
+
+provider: mock
+model: mock-model
+
+repl:
+  security_level: standard
+  show_cost: true

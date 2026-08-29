@@ -1,0 +1,24 @@
+# Kitty-Go example user configuration.
+# Copy to configs/user.yaml (or ~/.kitty/config.yaml) and edit.
+
+provider: opencode
+model: big-pickle
+# api_key: your-key-here       # or use OPENCODE_API_KEY env
+# api_key_env: OPENCODE_API_KEY
+
+opencode:
+  base_url: "https://opencode.ai/zen/v1"
+  default_model: "big-pickle"
+
+budget:
+  daily: 5.0
+  monthly: 50.0
+
+limits:
+  tokens.monthly: 1000000
+  requests.daily: 1000
+
+repl:
+  security_level: standard
+  show_cost: true
+  sandbox_root: ~/.kitty/sandbox
