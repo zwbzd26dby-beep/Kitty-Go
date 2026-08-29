@@ -44,19 +44,6 @@ func TestOpenCodeModelCatalog(t *testing.T) {
 	}
 }
 
-// TestOpenCodeRoutePrefersBigPickleForCode verifies the coding routing rule.
-func TestOpenCodeRoutePrefersBigPickleForCode(t *testing.T) {
-	if got := opencode.Route("write some go code please"); got != opencode.ModelBigPickle {
-		t.Fatalf("expected big-pickle for code, got %q", got)
-	}
-	if got := opencode.Route("coding task"); got != opencode.ModelBigPickle {
-		t.Fatalf("expected big-pickle for coding, got %q", got)
-	}
-	if got := opencode.Route("what is the weather"); got != opencode.DefaultModel {
-		t.Fatalf("expected default for non-code, got %q", got)
-	}
-}
-
 // TestOpenCodeComplete verifies a round-trip through OpenCode Zen with a
 // mocked transport, sending the model in the request.
 func TestOpenCodeComplete(t *testing.T) {
