@@ -28,29 +28,23 @@ type RetryPolicy struct {
 	Multiplier float64
 }
 
-func (p RetryPolicy) backoff() time.Duration {
-	m := p.Multiplier
-	if m <= 0 {
-		m = 2.0
-	}
-	wait := p.Initial
-	for i := 0; i < p.MaxAttempts; i++ {
-		if wait >= p.MaxBackoff {
-			return p.MaxBackoff
-		}
-		next := time.Duration(float64(wait) * m)
-		if next > p.MaxBackoff || next <= wait {
-			return p.MaxBackoff
-		}
-		wait = next
-	}
-	return p.MaxBackoff
-}
-
 // RetryWith invokes fn up to MaxAttempts times with exponential backoff,
 // until it returns nil, a non-retryable error, or the context is cancelled.
 // When isRetryable is nil, every error is treated as retryable.
 func RetryWith(ctx context.Context, policy RetryPolicy, isRetryable func(error) bool, fn func() error) error {
+	wait := policy.Initial
+	if wait <= 0 {
+		wait = time.Millisecond
+	}
+	max := policy.MaxBackoff
+	if max <= 0 {
+		max = wait
+	}
+	m := policy.Multiplier
+	if m <= 0 {
+		m = 2.0
+	}
+
 	var err error
 	for attempt := 1; attempt <= policy.MaxAttempts; attempt++ {
 		if err = fn(); err == nil {
@@ -65,8 +59,17 @@ func RetryWith(ctx context.Context, policy RetryPolicy, isRetryable func(error) 
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(policy.backoff()):
+		case <-time.After(wait):
 		}
+		wait = nextBackoff(wait, max, m)
 	}
 	return err
+}
+
+func nextBackoff(wait, max time.Duration, m float64) time.Duration {
+	next := time.Duration(float64(wait) * m)
+	if next > max || next <= wait {
+		return max
+	}
+	return next
 }
