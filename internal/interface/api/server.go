@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/pprof"
 	"strings"
 
 	"github.com/zwbzd26dby-beep/Kitty-Go/internal/agent"
@@ -36,6 +37,11 @@ func NewServer(a agent.Agent, obs *observability.Observability, token string) *S
 	s.mux.HandleFunc("/health", s.handleHealth)
 	s.mux.HandleFunc("/metrics", s.handleMetrics)
 	s.mux.HandleFunc("/agent/respond", s.withAuth(s.handleRespond))
+	s.mux.HandleFunc("/debug/pprof/", pprof.Index)
+	s.mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	s.mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	s.mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	s.mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	return s
 }
 
