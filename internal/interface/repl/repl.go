@@ -1,5 +1,6 @@
-// Package repl implements the interactive REPL engine. It is decoupled from
-// the LLM client so different providers can be plugged in (Phase 2+).
+// Package repl implements the interactive REPL engine. From Phase 1 the
+// engine drives an agent.Agent backed by the full Core stack
+// (Agent → Orchestrator → Executor → provider), so providers can be swapped.
 package repl
 
 import (
@@ -9,16 +10,17 @@ import (
 	"io"
 	"strings"
 
+	"github.com/zwbzd26dby-beep/Kitty-Go/internal/agent"
+	"github.com/zwbzd26dby-beep/Kitty-Go/internal/execution"
+	"github.com/zwbzd26dby-beep/Kitty-Go/internal/orchestrator"
 	"github.com/zwbzd26dby-beep/Kitty-Go/pkg/llm"
-	"github.com/zwbzd26dby-beep/Kitty-Go/pkg/types"
 )
 
 // Engine drives an interactive session over the provided reader/writer.
 type Engine struct {
-	client   llm.Client
+	agent    agent.Agent
 	in       *bufio.Reader
 	out      io.Writer
-	conv     *types.Conversation
 	ctx      context.Context
 	commands map[string]CommandHandler
 }
@@ -26,18 +28,26 @@ type Engine struct {
 // CommandHandler processes a REPL command (arguments passed without the slash).
 type CommandHandler func(args []string) error
 
-// NewEngine creates a REPL engine with the given client and I/O streams.
-func NewEngine(client llm.Client, r io.Reader, w io.Writer) *Engine {
+// NewEngineWithAgent creates a REPL engine driven by an agent.Agent.
+func NewEngineWithAgent(a agent.Agent, r io.Reader, w io.Writer) *Engine {
 	e := &Engine{
-		client:   client,
+		agent:    a,
 		in:       bufio.NewReader(r),
 		out:      w,
-		conv:     types.NewConversation(),
 		ctx:      context.Background(),
 		commands: map[string]CommandHandler{},
 	}
 	e.registerBuiltins()
 	return e
+}
+
+// NewEngine creates a REPL engine on the full default stack built around the
+// given LLM client: Agent → Orchestrator → Executor(Local) → client.
+func NewEngine(client llm.Client, r io.Reader, w io.Writer) *Engine {
+	exec := execution.NewLocalExecutor()
+	orch := orchestrator.New(exec, client)
+	a := agent.New(orch, agent.DefaultOptions{})
+	return NewEngineWithAgent(a, r, w)
 }
 
 func (e *Engine) registerBuiltins() {
@@ -58,7 +68,7 @@ func (e *Engine) cmdHelp([]string) error {
 }
 
 func (e *Engine) cmdClear([]string) error {
-	e.conv.Clear()
+	e.agent.ClearHistory()
 	fmt.Fprintln(e.out, "Historia wyczyszczona.")
 	return nil
 }
@@ -130,17 +140,10 @@ func (e *Engine) handleCommand(line string) (bool, error) {
 }
 
 func (e *Engine) respond(userInput string) error {
-	msg, err := types.NewMessage(userInput)
+	resp, err := e.agent.Process(e.ctx, userInput)
 	if err != nil {
 		return err
 	}
-	e.conv.AddMessage(msg)
-	history := e.conv.GetHistory()
-	resp, err := e.client.Generate(e.ctx, msg, history)
-	if err != nil {
-		return err
-	}
-	e.conv.AddResponse(resp)
-	fmt.Fprintf(e.out, "Kitty: %s\n", resp.Content())
+	fmt.Fprintf(e.out, "Kitty: %s\n", resp.Content)
 	return nil
 }

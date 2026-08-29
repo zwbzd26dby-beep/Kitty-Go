@@ -1,12 +1,12 @@
 package types
 
 // Task represents a unit of work handed to the orchestrator.
-// In Phase 0 it is a minimal carrier; later phases extend it with
-// requirements, priority, budget and deadline.
+// In Phase 1 it carries the input, session and conversation history.
 type Task struct {
 	ID      string
 	Input   string
 	Session string
+	History []Turn
 }
 
 // TaskResult is the outcome of executing a task.
